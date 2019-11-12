@@ -1,2 +1,2 @@
 # Asteroidz
-Basic Asgeroidz clone made in PyGame.
+Basic Asteroidz clone made in PyGame.
