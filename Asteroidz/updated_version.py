@@ -11,7 +11,6 @@ class Game():
         self.asteroids = set()
         self.player = None
         self.score = 0
-        self.objects = set()
         self.font = pygame.font.SysFont('freesansbold',60)
     
     def move(self, object):
@@ -184,6 +183,8 @@ while True:
     else:
         game.move(game.player)
         game.player.check_input()
+
+        '''
         for object in game.objects:
             game.move(object)
             if isinstance(object, Asteroid):
@@ -202,6 +203,8 @@ while True:
                 if game.rough_hit(asteroid,)
             '''
             object.draw()
+        
+        '''
         
         game.player.draw()
     
