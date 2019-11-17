@@ -170,7 +170,6 @@ while True:
         if (event.type == KEYDOWN) and (event.key == K_SPACE) and (gameStart == False):
             game = Game()
             game.player = Player()
-            game.objects.add(game.player)
             for _ in range(6):
                 asteroid = Asteroid(randint(0,game.w),randint(0,game.h))
                 game.asteroids.add(asteroid)
@@ -183,18 +182,17 @@ while True:
     if not gameStart:
         show_menu()
     else:
+        game.move(game.player)
         game.player.check_input()
         for object in game.objects:
             game.move(object)
-            if "Asteroid" in type(object):
-                pass
-                #it's an asteroid
-            elif "Player" in type(object):
-                pass
-                #it's the player
-            elif "Bullet" in type(object):
-                pass
-                #it's a bullet
+            if isinstance(object, Asteroid):
+                if game.rough_hit(game.player, object):
+                    print ('Rough hit with player')
+                #elif this object, which is an asteroid, hits another asteroid
+            #elif isinstance(object, Bullet):
+                #pass
+                #it's a bullet, compare with player and asteroids
             '''
             if type(object) == "<class '__main__.Foo'>"
                                 game.move(asteroid)
@@ -202,9 +200,10 @@ while True:
                         print ('Rough hit')
             
                 if game.rough_hit(asteroid,)
-
-                object.draw()
             '''
+            object.draw()
+        
+        game.player.draw()
     
     pygame.display.flip()
     clock.tick(35)
