@@ -7,8 +7,8 @@ from pygame.locals import *
 class Game():
     def __init__(self):
         self.w, self.h = pygame.display.get_surface().get_size()
-        self.bullets = set()
-        self.asteroids = set()
+        self.bullets = []
+        self.asteroids = []
         self.player = None
         self.score = 0
         self.font = pygame.font.SysFont('freesansbold',60)
@@ -125,7 +125,7 @@ class Asteroid:
         self.max_r = game.calculateMaxR(self)
     
     def create_shape(self):
-        var = 11
+        var = 14
         for idx,i in enumerate(self.shape):
             angle = idx * 72
             i[0] = self.x + ((self.size * var) * sin(radians(randrange(angle-var,angle+var) % 360))) \
@@ -171,8 +171,7 @@ while True:
             game.player = Player()
             for _ in range(6):
                 asteroid = Asteroid(randint(0,game.w),randint(0,game.h))
-                game.asteroids.add(asteroid)
-                game.objects.add(asteroid)
+                game.asteroids.append(asteroid)
 
             gameStart = True
 
@@ -181,31 +180,29 @@ while True:
     if not gameStart:
         show_menu()
     else:
-        game.move(game.player)
         game.player.check_input()
 
-        '''
-        for object in game.objects:
-            game.move(object)
-            if isinstance(object, Asteroid):
-                if game.rough_hit(game.player, object):
-                    print ('Rough hit with player')
-                #elif this object, which is an asteroid, hits another asteroid
-            #elif isinstance(object, Bullet):
-                #pass
-                #it's a bullet, compare with player and asteroids
-            '''
-            if type(object) == "<class '__main__.Foo'>"
-                                game.move(asteroid)
-                    if game.rough_hit(game.player, asteroid):
-                        print ('Rough hit')
+        temp_asteroids = game.asteroids.copy()
+        for idx, asteroid in enumerate(game.asteroids):
+            if game.rough_hit(game.player,asteroid):
+                print ("Player and asteroid collided!")
             
-                if game.rough_hit(asteroid,)
-            '''
-            object.draw()
+            temp_asteroids.remove(asteroid)
+            for temp_asteroid in temp_asteroids:
+                if game.rough_hit(temp_asteroid,asteroid):
+                    asteroid.angle = int((temp_asteroid.angle+asteroid.angle)/2)
+                    temp_asteroid.angle += 90
+
+                    #make a change_angle() function to wrap around 0 and 360
+            
+            for bullet in game.bullets:
+                #compare asteroid with all bullets
+                pass
+
+            game.move(asteroid)
+            asteroid.draw()
         
-        '''
-        
+        game.move(game.player)
         game.player.draw()
     
     pygame.display.flip()
