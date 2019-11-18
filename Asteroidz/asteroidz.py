@@ -3,98 +3,96 @@ import sys
 from math import cos, sin, radians, sqrt
 from random import randint, uniform, randrange
 from pygame.locals import *
+from numpy import array
 
-pygame.init()
-screen = pygame.display.set_mode((800, 600))
-clock = pygame.time.Clock()
-pygame.display.set_caption('Asteroidz')
-gameStart = False
+###########################
+#Anything wrapped with big comment lines can be improved (either efficiency or amount of lines)
+###########################
 
-#circle collission detection for rough calculation
-#if circle collission detection says objects are close
-#then call a more acurate algorithm to actually check if it's been hit
-
-#sutherland hodgeman
-
-#for each asteroid, have it calculate the max radius of it's shape, so that 
-#doing rough check for collision is easy, you just check that max radii 
-#compared to distance between object and asteroid
-
-class Game():
+class Game:
     def __init__(self):
         self.w, self.h = pygame.display.get_surface().get_size()
-        self.bullets = set()
-        self.asteroids = set()
-        self.player = Player()
+        self.bullets = []
+        self.asteroids = []
+        self.player = None
         self.score = 0
         self.font = pygame.font.SysFont('freesansbold',60)
-        self.background = set()
+    
+    def rough_hit(self, object1, object2):
+        if (object1.max_r + object2.max_r) <= (sqrt((object1.x-object2.x)**2 + (object2.y-object1.y)**2)):
+            return False
+        return True
     
     def show_menu(self):
-        menuText = game.font.render("Press space to begin!", 1, (255, 255, 255), 2)
-        screen.blit(menuText, (self.w/4, self.h/2))
-
-    def create_background(self):
-        for _ in range(30):
-            self.background.add((randint(0,self.w),randint(0,self.h)))
+        font = pygame.font.SysFont('freesansbold', 60)
+        menuText = font.render('Press space to begin!', 1, (255,255,255), 2)
+        screen.blit(menuText, (200,300))
 
     def draw_background(self):
         screen.fill((0,0,0))
-        for i in self.background:
+        for i in background:
             pygame.draw.circle(screen,(100,100,100),i,1)
-    
-    def move(self, object):
-        x = object.velocity * cos(radians((90-object.angle) % 360))
-        y = -(object.velocity * sin(radians((90-object.angle) % 360)))
-        
-        object.x += x
-        object.y += y
-        for vertex in object.shape:
-            vertex[0] += x
-            vertex[1] += y
-            
-        if object.x > self.w:
-            object.x -= self.w
-            for vertex in object.shape:
-                vertex[0] -= self.w
-        elif object.x < 0:
-            object.x += self.w
-            for vertex in object.shape:
-                vertex[0] += self.w
-        if object.y > self.h:
-            object.y -= self.h
-            for vertex in object.shape:
-                vertex[1] -= self.h
-        elif object.y < 0:
-            object.y += self.h
-            for vertex in object.shape:
-                vertex[1] += self.h
-    
-    def calculateMaxR(self, object):
-        radii = []
-        for i in object.shape:
-            radii.append(sqrt(i[0]**2 + i[1]**2))
-        
-        return max(radii)
-    
-    def rough_hit(self, object1, object2):
-        if (object1.max_r + object2.max_r) <= (sqrt((object1.x-object2.x)**2 + (object1.y-object2.y)**2)):
-            return True
-        else:
-            return False
 
-class Player():
-    def __init__(self):
-        self.x = 400
-        self.y = 400
+class GameObject:
+    def __init__(self, object_type, x, y):
+        self.x = x
+        self.y = y
+        self.velocity = array([0,0])
         self.angle = 0
-        self.shape = [[self.x,self.y - 15],
+        
+        if object_type == "asteroid":
+            self.shape = [[0,0],[0,0],[0,0],[0,0],[0,0]]
+            self.size = 4
+            self.hp = self.size * 2
+        elif object_type == "player":
+            self.shape = [[self.x,self.y - 15],
                       [self.x - 10,self.y + 10],
                       [self.x + 10,self.y + 10]]
-        self.velocity = 0
-        self.max_r = game.calculateMaxR(self)
+        
+        self.calculateMaxR()
+
+    def move(self):
+        self.x += self.velocity[0]
+        self.y += self.velocity[1]
+
+        for vertex in self.shape:
+            vertex[0] += self.velocity[0]
+            vertex[1] += self.velocity[1]
+        
+        #########
+        if self.x > game.w:
+            self.x -= game.w
+            for vertex in self.shape:
+                vertex[0] -= game.w
+        elif self.x < 0:
+            self.x += game.w
+            for vertex in self.shape:
+                vertex[0] += game.w
+        if self.y > game.h:
+            self.y -= game.h
+            for vertex in self.shape:
+                vertex[1] -= game.h
+        elif self.y < 0:
+            self.y += game.h
+            for vertex in self.shape:
+                vertex[1] += game.h
+        #########
+    
+    def calculateMaxR(self):
+        radii = []
+        for i in self.shape:
+            dist = sqrt((self.x - i[0])**2 + (self.y - i[1])**2)
+            radii.append(dist)
+        
+        self.max_r = max(radii)
+
+class Player(GameObject):
+    def __init__(self):
+        super(Player, self).__init__("player",400,400)
+        self.angle = 0
 
     def rotate(self,degree):
+        self.angle += degree
         for idx,i in enumerate(self.shape):
             x,y = i[0],i[1]
             angleRad = radians(degree % 360)
@@ -105,26 +103,28 @@ class Player():
             self.shape[idx] = [newPoint[0],newPoint[1]]
         
     def accelerate(self):
-        if self.velocity < 4:
-            self.velocity += 0.1
-        elif self.velocity >= 4:
-            self.velocity = 4
+        if sqrt(self.velocity[0]**2 + self.velocity[1]**2) < 4:
+            self.velocity[0] += 0#calculate x increase
+            self.velocity[1] += 0#calculate y increase
+            #magnitude of velocity vector should increase by 0.1
+        elif sqrt(self.velocity[0]**2 + self.velocity[1]**2) >= 4:
+            self.velocity = array([4,4]) #max speed
     
     def decelerate(self):
-        if self.velocity > 0:
-            self.velocity -= 0.2
-        elif self.velocity <= 0:
-            self.velocity = 0
+        if sqrt(self.velocity[0]**2 + self.velocity[1]**2) > 0:
+            self.velocity[0] += 0#calculate x increase
+            self.velocity[1] += 0#calculate y increase
+            #magnitude of velocity vector should decrease by 0.2
+        elif sqrt(self.velocity[0]**2 + self.velocity[1]**2) <= 0:
+            self.velocity = array([0,0]) #min speed
     
     def check_input(self):
         key = pygame.key.get_pressed()
     
         if key[pygame.K_LEFT]:
-            self.angle -= 7
-            self.rotate(-7)
+            self.rotate(-11)
         elif key[pygame.K_RIGHT]:
-            self.angle += 7
-            self.rotate(7)
+            self.rotate(11)
     
         if self.angle > 360:
             self.angle -= 360
@@ -142,26 +142,27 @@ class Player():
                       (self.shape[2][0],self.shape[2][1])]
         pygame.draw.polygon(screen,(255,255,255),tupleShape,2)
 
-class Asteroid:
+class Asteroid(GameObject):
     def __init__(self, x, y):
-        self.x = x
-        self.y = y
+        super(Asteroid,self).__init__("asteroid",x,y)
         self.angle = randint(0,360)
-        self.shape = [[0,0],[0,0],[0,0],[0,0],[0,0]]
-        self.size = 4
         self.create_shape()
-        self.velocity = uniform((2.5/self.size)*0.5,(2.5/self.size)*3)
-        self.hp = self.size * 2
-        self.max_r = game.calculateMaxR(self)
+        temp = uniform((1.75/self.size)*0.5,(1.75/self.size)*3)
+        self.velocity[0] = temp
+        temp = uniform((1.75/self.size)*0.5,(1.75/self.size)*3)
+        self.velocity[1] = temp
     
     def create_shape(self):
-        var = 11
+        var = 14
         for idx,i in enumerate(self.shape):
             angle = idx * 72
             i[0] = self.x + ((self.size * var) * sin(radians(randrange(angle-var,angle+var) % 360))) \
                    + randint(-self.size, self.size)
             i[1] = self.y + ((self.size * var) * cos(radians(randrange(angle-var,angle+var) % 360))) \
                    + randint(-self.size, self.size)
+    
+    def collision_with_asteroid(self, object):
+        pass
     
     def draw(self):
         tupleShape = [(self.shape[0][0],self.shape[0][1]),
@@ -171,34 +172,58 @@ class Asteroid:
                       (self.shape[4][0],self.shape[4][1])]
         pygame.draw.polygon(screen,(255,255,255),tupleShape,2)
 
+pygame.init() 
+pygame.font.init()
+screen = pygame.display.set_mode((800, 600))
+clock = pygame.time.Clock()
+pygame.display.set_caption('Asteroidz')
+gameStart = False
+background = set()
+for _ in range(30):
+    background.add((randint(0,800),randint(0,600)))
+
 game = Game()
-game.create_background()
 
 while True:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
-            pygame.quit(); sys.exit()
+            pygame.quit();sys.exit()
+        
         if (event.type == KEYDOWN) and (event.key == K_SPACE) and (gameStart == False):
-            gameStart = True
-            player = Player()
-            for i in range(6):
+            game.player = Player()
+            for _ in range(6):
                 asteroid = Asteroid(randint(0,game.w),randint(0,game.h))
-                game.asteroids.add(asteroid)
-    
-    game.draw_background()
-    if gameStart:
-        player.check_input()
-        game.move(player)
-        for asteroid in game.asteroids:
-            game.move(asteroid)
-            if game.rough_hit(player, asteroid):
-                print ('Rough hit')
+                game.asteroids.append(asteroid)
 
+            gameStart = True
+
+    game.draw_background()
+
+    if not gameStart:
+        game.show_menu()
+    else:
+        game.player.check_input()
+
+        temp_asteroids = game.asteroids.copy()
+        for idx, asteroid in enumerate(game.asteroids):
+            if game.rough_hit(game.player,asteroid):
+                print ("Player and asteroid collided!")
+            
+            temp_asteroids.remove(asteroid)
+            for temp_asteroid in temp_asteroids:
+                if game.rough_hit(temp_asteroid,asteroid):
+                    print ("asteroid collided with another!")
+                    #temp_asteroid.collision_with_asteroid(asteroid)
+            
+            for bullet in game.bullets:
+                #compare asteroid with all bullets
+                pass
+
+            asteroid.move()
             asteroid.draw()
         
-        player.draw()
-    else:
-        game.show_menu()
-
+        game.player.move()
+        game.player.draw()
+    
     pygame.display.flip()
     clock.tick(35)
