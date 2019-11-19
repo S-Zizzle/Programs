@@ -7,6 +7,8 @@ from numpy import array
 
 ###########################
 #Anything wrapped with big comment lines can be improved (either efficiency or amount of lines)
+
+#Make asteroids initial spawn far away from each other
 ###########################
 
 class Game:
@@ -37,7 +39,7 @@ class GameObject:
     def __init__(self, object_type, x, y):
         self.x = x
         self.y = y
-        self.velocity = array([0,0])
+        self.velocity = array([0,0],dtype=float)
         self.angle = 0
         
         if object_type == "asteroid":
@@ -48,8 +50,7 @@ class GameObject:
             self.shape = [[self.x,self.y - 15],
                       [self.x - 10,self.y + 10],
                       [self.x + 10,self.y + 10]]
-        
-        self.calculateMaxR()
+            self.calculateMaxR()
 
     def move(self):
         self.x += self.velocity[0]
@@ -147,11 +148,12 @@ class Asteroid(GameObject):
         super(Asteroid,self).__init__("asteroid",x,y)
         self.angle = randint(0,360)
         self.create_shape()
-        temp = uniform((1.75/self.size)*0.5,(1.75/self.size)*3)
+        self.calculateMaxR()
+        temp = uniform(-(1.75/self.size)*1.5,(1.75/self.size)*3)
         self.velocity[0] = temp
-        temp = uniform((1.75/self.size)*0.5,(1.75/self.size)*3)
+        temp = uniform(-(1.75/self.size)*1.5,(1.75/self.size)*3)
         self.velocity[1] = temp
-    
+
     def create_shape(self):
         var = 14
         for idx,i in enumerate(self.shape):
@@ -162,7 +164,7 @@ class Asteroid(GameObject):
                    + randint(-self.size, self.size)
     
     def collision_with_asteroid(self, object):
-        pass
+        self.velocity, object.velocity = object.velocity, self.velocity
     
     def draw(self):
         tupleShape = [(self.shape[0][0],self.shape[0][1]),
@@ -209,16 +211,16 @@ while True:
             if game.rough_hit(game.player,asteroid):
                 print ("Player and asteroid collided!")
             
-            temp_asteroids.remove(asteroid)
+            #temp_asteroids.remove(asteroid)
             for temp_asteroid in temp_asteroids:
-                if game.rough_hit(temp_asteroid,asteroid):
-                    print ("asteroid collided with another!")
-                    #temp_asteroid.collision_with_asteroid(asteroid)
+                if temp_asteroid != asteroid:
+                    if game.rough_hit(temp_asteroid,asteroid):
+                        temp_asteroid.collision_with_asteroid(asteroid)
             
             for bullet in game.bullets:
                 #compare asteroid with all bullets
                 pass
-
+            
             asteroid.move()
             asteroid.draw()
         
