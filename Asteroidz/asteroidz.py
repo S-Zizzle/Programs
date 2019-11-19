@@ -8,6 +8,10 @@ from numpy import array
 ###########################
 #Anything wrapped with big comment lines can be improved (either efficiency or amount of lines)
 
+#BUG - if an asteroid wraps around the screen when another asteroid is already at the other end of the screen,
+#      they clip inside each other and won't split up until one of them manages to wrap around the screen before 
+#      the other
+
 #Make asteroids initial spawn far away from each other
 ###########################
 
@@ -40,13 +44,14 @@ class GameObject:
         self.x = x
         self.y = y
         self.velocity = array([0,0],dtype=float)
-        self.angle = 0
         
         if object_type == "asteroid":
             self.shape = [[0,0],[0,0],[0,0],[0,0],[0,0]]
             self.size = 4
             self.hp = self.size * 2
+            self.angle = randint(0,360)
         elif object_type == "player":
+            self.angle = 0
             self.shape = [[self.x,self.y - 15],
                       [self.x - 10,self.y + 10],
                       [self.x + 10,self.y + 10]]
@@ -90,7 +95,6 @@ class GameObject:
 class Player(GameObject):
     def __init__(self):
         super(Player, self).__init__("player",400,400)
-        self.angle = 0
 
     def rotate(self,degree):
         self.angle += degree
@@ -104,20 +108,20 @@ class Player(GameObject):
             self.shape[idx] = [newPoint[0],newPoint[1]]
         
     def accelerate(self):
-        if sqrt(self.velocity[0]**2 + self.velocity[1]**2) < 4:
-            self.velocity[0] += 0#calculate x increase
-            self.velocity[1] += 0#calculate y increase
-            #magnitude of velocity vector should increase by 0.1
-        elif sqrt(self.velocity[0]**2 + self.velocity[1]**2) >= 4:
-            self.velocity = array([4,4]) #max speed
+        if self.velocity[0] < 4:
+            self.velocity[0] += 0.1 * cos(self.angle)
+        if self.velocity[1] < 4:
+            self.velocity[1] += 0.1 * sin(self.angle)
+        
+        self.velocity[(self.velocity > 4)] = 4 #not working as intended
     
     def decelerate(self):
-        if sqrt(self.velocity[0]**2 + self.velocity[1]**2) > 0:
-            self.velocity[0] += 0#calculate x increase
-            self.velocity[1] += 0#calculate y increase
-            #magnitude of velocity vector should decrease by 0.2
-        elif sqrt(self.velocity[0]**2 + self.velocity[1]**2) <= 0:
-            self.velocity = array([0,0]) #min speed
+        if self.velocity[0] > 0:
+            self.velocity[0] -= 0.2 * cos(self.angle)
+        if self.velocity[1] > 0:
+            self.velocity[1] -= 0.2 * sin(self.angle)
+        
+        self.velocity[(self.velocity < 0)] = 0 #not working as intended
     
     def check_input(self):
         key = pygame.key.get_pressed()
@@ -146,7 +150,6 @@ class Player(GameObject):
 class Asteroid(GameObject):
     def __init__(self, x, y):
         super(Asteroid,self).__init__("asteroid",x,y)
-        self.angle = randint(0,360)
         self.create_shape()
         self.calculateMaxR()
         temp = uniform(-(1.75/self.size)*1.5,(1.75/self.size)*3)
@@ -209,9 +212,9 @@ while True:
         temp_asteroids = game.asteroids.copy()
         for idx, asteroid in enumerate(game.asteroids):
             if game.rough_hit(game.player,asteroid):
-                print ("Player and asteroid collided!")
-            
-            #temp_asteroids.remove(asteroid)
+                #print ("Player and asteroid collided!")
+                pass
+
             for temp_asteroid in temp_asteroids:
                 if temp_asteroid != asteroid:
                     if game.rough_hit(temp_asteroid,asteroid):
@@ -224,6 +227,7 @@ while True:
             asteroid.move()
             asteroid.draw()
         
+        print (game.player.velocity)
         game.player.move()
         game.player.draw()
     
