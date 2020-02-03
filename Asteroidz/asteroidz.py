@@ -10,7 +10,12 @@ from numpy import array
 
 #BUG - if an asteroid wraps around the screen when another asteroid is already at the other end of the screen,
 #      they clip inside each other and won't split up until one of them manages to wrap around the screen before 
-#      the other
+#      the other.
+#      TO FIX THIS - Add a timer to each asteroid
+#                    During the check between all asteroids with other asteroids, if
+#                    they are close eough thtat they are inside of each other, then give them opposing velocities
+#                    for a certain amount of time counted with timer. After timer runs out, either,
+#                    
 
 #Make asteroids initial spawn far away from each other
 ###########################
@@ -108,20 +113,27 @@ class Player(GameObject):
             self.shape[idx] = [newPoint[0],newPoint[1]]
         
     def accelerate(self):
-        if self.velocity[0] < 4:
-            self.velocity[0] += 0.1 * cos(self.angle)
-        if self.velocity[1] < 4:
-            self.velocity[1] += 0.1 * sin(self.angle)
-        
-        self.velocity[(self.velocity > 4)] = 4 #not working as intended
-    
+        print (self.velocity, self.angle)
+        if abs(self.velocity[0]) < 4:
+            self.velocity[0] += 0.1 * sin(radians(90-self.angle))
+        else:
+            self.velocity[0] = 4
+
+        if abs(self.velocity[1]) < 4:
+            self.velocity[1] += 0.1 * cos(radians(90-self.angle))
+        else:
+            self.velocity[1] = 4
+
     def decelerate(self):
-        if self.velocity[0] > 0:
-            self.velocity[0] -= 0.2 * cos(self.angle)
-        if self.velocity[1] > 0:
-            self.velocity[1] -= 0.2 * sin(self.angle)
-        
-        self.velocity[(self.velocity < 0)] = 0 #not working as intended
+        if abs(self.velocity[0]) > 0:
+            self.velocity[0] -= 0.2 * cos(self.velocity[0])
+        else:
+            self.velocity[0] = 0.0
+
+        if abs(self.velocity[1]) > 0:
+            self.velocity[1] -= 0.2 * sin(self.velocity[1])
+        else:
+            self.velocity[1] = 0.0
     
     def check_input(self):
         key = pygame.key.get_pressed()
@@ -178,7 +190,7 @@ class Asteroid(GameObject):
         pygame.draw.polygon(screen,(255,255,255),tupleShape,2)
 
 pygame.init() 
-pygame.font.init()
+pygame.font.init() #should be initialised with pygame.init() but wasn't working, adding this line fixed issues. Maybe delete in future
 screen = pygame.display.set_mode((800, 600))
 clock = pygame.time.Clock()
 pygame.display.set_caption('Asteroidz')
@@ -227,7 +239,6 @@ while True:
             asteroid.move()
             asteroid.draw()
         
-        print (game.player.velocity)
         game.player.move()
         game.player.draw()
     
