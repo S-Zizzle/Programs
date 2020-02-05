@@ -1,24 +1,9 @@
 import pygame
 import sys
-from math import cos, sin, radians, sqrt
+from math import cos, sin, radians, sqrt, atan, degrees
 from random import randint, uniform, randrange
 from pygame.locals import *
 from numpy import array
-
-###########################
-#Anything wrapped with big comment lines can be improved (either efficiency or amount of lines)
-
-#BUG - if an asteroid wraps around the screen when another asteroid is already at the other end of the screen,
-#      they clip inside each other and won't split up until one of them manages to wrap around the screen before 
-#      the other.
-#      TO FIX THIS - Add a timer to each asteroid
-#                    During the check between all asteroids with other asteroids, if
-#                    they are close eough thtat they are inside of each other, then give them opposing velocities
-#                    for a certain amount of time counted with timer. After timer runs out, either,
-#                    
-
-#Make asteroids initial spawn far away from each other
-###########################
 
 class Game:
     def __init__(self):
@@ -49,6 +34,7 @@ class GameObject:
         self.x = x
         self.y = y
         self.velocity = array([0,0],dtype=float)
+        self.speed = 0
         
         if object_type == "asteroid":
             self.shape = [[0,0],[0,0],[0,0],[0,0],[0,0]]
@@ -63,31 +49,31 @@ class GameObject:
             self.calculateMaxR()
 
     def move(self):
-        self.x += self.velocity[0]
-        self.y += self.velocity[1]
+        x_change = self.speed * sin(radians(self.angle))
+        y_change = self.speed * -cos(radians(self.angle))
+        self.x += x_change
+        self.y += y_change
 
         for vertex in self.shape:
-            vertex[0] += self.velocity[0]
-            vertex[1] += self.velocity[1]
+            vertex[0] += x_change
+            vertex[1] += y_change
         
-        #########
-        if self.x > game.w:
-            self.x -= game.w
+        if self.x - self.max_r > game.w:
+            self.x -= game.w + self.max_r
             for vertex in self.shape:
                 vertex[0] -= game.w
-        elif self.x < 0:
-            self.x += game.w
+        elif self.x + self.max_r < 0:
+            self.x += game.w - self.max_r
             for vertex in self.shape:
                 vertex[0] += game.w
-        if self.y > game.h:
-            self.y -= game.h
+        if self.y - self.max_r > game.h:
+            self.y -= game.h + self.max_r
             for vertex in self.shape:
                 vertex[1] -= game.h
-        elif self.y < 0:
-            self.y += game.h
+        elif self.y + self.max_r < 0:
+            self.y += game.h - self.max_r
             for vertex in self.shape:
                 vertex[1] += game.h
-        #########
     
     def calculateMaxR(self):
         radii = []
@@ -113,27 +99,12 @@ class Player(GameObject):
             self.shape[idx] = [newPoint[0],newPoint[1]]
         
     def accelerate(self):
-        print (self.velocity, self.angle)
-        if abs(self.velocity[0]) < 4:
-            self.velocity[0] += 0.1 * sin(radians(90-self.angle))
-        else:
-            self.velocity[0] = 4
-
-        if abs(self.velocity[1]) < 4:
-            self.velocity[1] += 0.1 * cos(radians(90-self.angle))
-        else:
-            self.velocity[1] = 4
+        if self.speed <= 4:
+            self.speed += 0.1
 
     def decelerate(self):
-        if abs(self.velocity[0]) > 0:
-            self.velocity[0] -= 0.2 * cos(self.velocity[0])
-        else:
-            self.velocity[0] = 0.0
-
-        if abs(self.velocity[1]) > 0:
-            self.velocity[1] -= 0.2 * sin(self.velocity[1])
-        else:
-            self.velocity[1] = 0.0
+        if self.speed >= 0:
+            self.speed -= 0.1
     
     def check_input(self):
         key = pygame.key.get_pressed()
@@ -164,13 +135,10 @@ class Asteroid(GameObject):
         super(Asteroid,self).__init__("asteroid",x,y)
         self.create_shape()
         self.calculateMaxR()
-        temp = uniform(-(1.75/self.size)*1.5,(1.75/self.size)*3)
-        self.velocity[0] = temp
-        temp = uniform(-(1.75/self.size)*1.5,(1.75/self.size)*3)
-        self.velocity[1] = temp
+        self.speed = uniform(-5.25/self.size,5.25/self.size)
 
     def create_shape(self):
-        var = 14
+        var = 11
         for idx,i in enumerate(self.shape):
             angle = idx * 72
             i[0] = self.x + ((self.size * var) * sin(radians(randrange(angle-var,angle+var) % 360))) \
@@ -179,7 +147,8 @@ class Asteroid(GameObject):
                    + randint(-self.size, self.size)
     
     def collision_with_asteroid(self, object):
-        self.velocity, object.velocity = object.velocity, self.velocity
+        self.speed, object.speed = object.speed, self.speed
+        self.angle, object.angle = object.angle, self.angle
     
     def draw(self):
         tupleShape = [(self.shape[0][0],self.shape[0][1]),
@@ -208,8 +177,8 @@ while True:
         
         if (event.type == KEYDOWN) and (event.key == K_SPACE) and (gameStart == False):
             game.player = Player()
-            for _ in range(6):
-                asteroid = Asteroid(randint(0,game.w),randint(0,game.h))
+            for i in range(6):
+                asteroid = Asteroid(150*i,100)
                 game.asteroids.append(asteroid)
 
             gameStart = True
